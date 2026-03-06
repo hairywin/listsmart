@@ -594,14 +594,16 @@ First, use web search to look up current Facebook Marketplace and eBay sold list
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
+          model: 'claude-sonnet-4-20250514',
           max_tokens: 1000,
           messages: [{ role: 'user', content }]
         })
       });
 
       const data = await res.json();
-      const raw = data.content.map(b => b.text || '').join('');
+      if (!res.ok || !data.content) throw new Error(data.error?.message || 'API error');
+      // Extract only text blocks (skip tool_use, tool_result, web_search blocks)
+      const raw = data.content.filter(b => b.type === 'text').map(b => b.text).join('');
       const clean = raw.replace(/```json|```/g, '').trim();
       generatedResult = JSON.parse(clean);
       renderResults(generatedResult);
