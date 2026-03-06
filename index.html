@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="theme-color" content="#0a0a0a"/>
+<title>ListSmart</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0a;
+    --surface: #141414;
+    --surface2: #1e1e1e;
+    --border: #2a2a2a;
+    --accent: #FF5C35;
+    --accent2: #FFB347;
+    --text: #f5f5f5;
+    --muted: #777;
+    --success: #3ddc84;
+    --radius: 20px;
+    --safe-bottom: env(safe-area-inset-bottom, 16px);
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── APP SHELL ── */
+  #app {
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    padding: 20px 24px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+  }
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 22px;
+    letter-spacing: -0.5px;
+  }
+  .logo span { color: var(--accent); }
+  .step-indicator {
+    font-family: 'DM Sans', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 5px 14px;
+  }
+  .step-indicator b { color: var(--accent); }
+
+  /* ── SCREENS ── */
+  .screen { display: none; flex-direction: column; flex: 1; padding: 24px 20px; }
+  .screen.active { display: flex; animation: slideIn 0.3s ease; }
+  @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+
+  /* ── TYPOGRAPHY ── */
+  .screen-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.8px;
+    margin-bottom: 6px;
+  }
+  .screen-title .highlight { color: var(--accent); }
+  .screen-sub {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.6;
+    margin-bottom: 28px;
+  }
+
+  /* ── PHOTO SECTION ── */
+  .photo-upload-btn {
+    width: 100%;
+    background: var(--surface);
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 32px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .photo-upload-btn:active { transform: scale(0.98); border-color: var(--accent); }
+  .upload-icon {
+    width: 56px;
+    height: 56px;
+    background: var(--surface2);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+  }
+  .upload-label { font-size: 15px; font-weight: 500; }
+  .upload-hint { font-size: 12px; color: var(--muted); }
+
+  .photo-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 16px;
+  }
+  .photo-thumb {
+    aspect-ratio: 1;
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    background: var(--surface);
+  }
+  .photo-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .photo-remove {
+    position: absolute;
+    top: 5px; right: 5px;
+    background: rgba(0,0,0,0.75);
+    border: none;
+    color: #fff;
+    border-radius: 50%;
+    width: 22px; height: 22px;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .add-more-thumb {
+    aspect-ratio: 1;
+    border-radius: 12px;
+    background: var(--surface);
+    border: 2px dashed var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .add-more-thumb:active { border-color: var(--accent); }
+
+  /* ── TEXTAREA ── */
+  .field-label {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+  textarea {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    padding: 16px;
+    resize: none;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  textarea:focus { border-color: var(--accent); }
+  textarea::placeholder { color: #444; }
+
+  /* ── BUTTONS ── */
+  .btn-primary {
+    width: 100%;
+    padding: 18px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 16px;
+    font-family: 'Syne', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    transition: transform 0.15s, opacity 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .btn-primary:active { transform: scale(0.97); }
+  .btn-primary:disabled { opacity: 0.5; }
+
+  .btn-secondary {
+    width: 100%;
+    padding: 16px;
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .btn-secondary:active { background: var(--surface2); }
+
+  .btn-fb {
+    width: 100%;
+    padding: 18px;
+    background: #1877F2;
+    color: #fff;
+    border: none;
+    border-radius: 16px;
+    font-family: 'Syne', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: transform 0.15s, opacity 0.2s;
+  }
+  .btn-fb:active { transform: scale(0.97); }
+
+  .btn-stack { display: flex; flex-direction: column; gap: 10px; margin-top: 24px; }
+
+  /* ── LOADING ── */
+  #screen-loading {
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+  }
+  .spinner {
+    width: 52px; height: 52px;
+    border: 3px solid var(--surface2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    text-align: center;
+  }
+  .loading-sub { color: var(--muted); font-size: 14px; text-align: center; }
+
+  /* ── RESULTS ── */
+  .result-field {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  .result-field-label {
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+    font-weight: 500;
+  }
+  .result-field-value {
+    font-size: 15px;
+    line-height: 1.65;
+    color: var(--text);
+  }
+  .result-field-value.title-val {
+    font-family: 'Syne', sans-serif;
+    font-size: 17px;
+    font-weight: 700;
+  }
+  .copy-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 10px;
+  }
+  .copy-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 8px;
+    padding: 5px 14px;
+    font-size: 12px;
+    font-family: monospace;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .copy-btn.copied { color: var(--success); border-color: var(--success); }
+
+  .price-chips {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+  }
+  .price-chip {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-family: monospace;
+  }
+  .price-chip.main {
+    background: #2a1500;
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: bold;
+  }
+
+  .keyword-wrap { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  .keyword-pill {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-family: monospace;
+    color: var(--muted);
+  }
+
+  .tip-box {
+    background: #0a1f0a;
+    border: 1px solid #1e3a1e;
+    border-radius: 14px;
+    padding: 14px 16px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #a8d5a2;
+    margin-bottom: 12px;
+  }
+  .tip-box strong { color: var(--success); }
+
+  .spacer { flex: 1; }
+  .bottom-pad { height: calc(16px + var(--safe-bottom)); }
+
+  .error-msg {
+    background: #1f0a0a;
+    border: 1px solid #3a1e1e;
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-size: 13px;
+    color: #ff8a8a;
+    margin-bottom: 16px;
+  }
+
+  /* ── FB DEEP LINK BANNER ── */
+  .fb-banner {
+    background: linear-gradient(135deg, #1877F2 0%, #0a4fa0 100%);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 16px;
+    text-align: center;
+  }
+  .fb-banner p { font-size: 13px; opacity: 0.85; margin-top: 6px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo"><span>List</span>Smart</div>
+    <div class="step-indicator" id="step-label">Step <b>1</b> of 3</div>
+  </div>
+
+  <!-- SCREEN 1: PHOTOS -->
+  <div class="screen active" id="screen-photos">
+    <div class="screen-title">Add your<br/><span class="highlight">photos.</span></div>
+    <div class="screen-sub">Tap to use your camera or pick from your gallery. Up to 6 photos.</div>
+
+    <div id="upload-zone" class="photo-upload-btn" onclick="document.getElementById('file-input').click()">
+      <div class="upload-icon">📷</div>
+      <div class="upload-label">Tap to add photos</div>
+      <div class="upload-hint">Camera or gallery · JPG, PNG, HEIC</div>
+    </div>
+    <input type="file" id="file-input" accept="image/*" multiple capture="environment" style="display:none" onchange="handleFiles(this.files)"/>
+
+    <div class="photo-grid" id="photo-grid" style="display:none"></div>
+
+    <div class="spacer"></div>
+    <div class="btn-stack">
+      <button class="btn-primary" onclick="goToStep2()">
+        Continue <span style="font-size:18px">→</span>
+      </button>
+    </div>
+    <div class="bottom-pad"></div>
+  </div>
+
+  <!-- SCREEN 2: DETAILS -->
+  <div class="screen" id="screen-details">
+    <div class="screen-title">Describe<br/><span class="highlight">your item.</span></div>
+    <div class="screen-sub">A few quick details — brand, condition, why you're selling. The more you add, the better the listing.</div>
+
+    <div class="field-label">Item details</div>
+    <textarea id="item-context" rows="6" placeholder="e.g. Nike Air Max size 10, worn about 5 times. No box. Bought for $130 last year. Small scuff on left toe."></textarea>
+
+    <div id="error-box" class="error-msg" style="display:none; margin-top:16px;"></div>
+
+    <div class="spacer"></div>
+    <div class="btn-stack">
+      <button class="btn-primary" onclick="generate()">
+        ✦ Generate My Listing
+      </button>
+      <button class="btn-secondary" onclick="goToStep(1)">← Back</button>
+    </div>
+    <div class="bottom-pad"></div>
+  </div>
+
+  <!-- SCREEN 3: LOADING -->
+  <div class="screen" id="screen-loading">
+    <div class="spinner"></div>
+    <div class="loading-text">Crafting your<br/>perfect listing...</div>
+    <div class="loading-sub">Analyzing photos & writing your post</div>
+  </div>
+
+  <!-- SCREEN 4: RESULTS -->
+  <div class="screen" id="screen-results">
+    <div class="screen-title">Your listing<br/><span class="highlight">is ready. ✓</span></div>
+    <div class="screen-sub">Copy your listing then tap the button to open Facebook Marketplace.</div>
+
+    <div id="results-content"></div>
+
+    <div class="btn-stack">
+      <button class="btn-primary" id="copy-all-btn" onclick="copyAll()">
+        📋 Copy Full Listing
+      </button>
+      <button class="btn-fb" onclick="openFacebook()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+        Open in Facebook Marketplace
+      </button>
+      <button class="btn-secondary" onclick="startOver()">← Start Over</button>
+    </div>
+    <div class="bottom-pad"></div>
+  </div>
+</div>
+
+<script>
+  let photos = []; // {url, data, type}
+  let generatedResult = null;
+
+  // ── PHOTO HANDLING ──
+  function handleFiles(files) {
+    Array.from(files).forEach(f => {
+      if (!f.type.startsWith('image/') || photos.length >= 6) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        photos.push({ url: e.target.result, data: e.target.result.split(',')[1], type: f.type });
+        renderPhotoGrid();
+      };
+      reader.readAsDataURL(f);
+    });
+  }
+
+  function renderPhotoGrid() {
+    const grid = document.getElementById('photo-grid');
+    const zone = document.getElementById('upload-zone');
+    if (photos.length === 0) {
+      zone.style.display = 'flex';
+      grid.style.display = 'none';
+      grid.innerHTML = '';
+      return;
+    }
+    zone.style.display = 'none';
+    grid.style.display = 'grid';
+    grid.innerHTML = '';
+    photos.forEach((p, i) => {
+      const div = document.createElement('div');
+      div.className = 'photo-thumb';
+      div.innerHTML = `<img src="${p.url}" /><button class="photo-remove" onclick="removePhoto(${i})">×</button>`;
+      grid.appendChild(div);
+    });
+    if (photos.length < 6) {
+      const add = document.createElement('div');
+      add.className = 'add-more-thumb';
+      add.innerHTML = '+';
+      add.onclick = () => document.getElementById('file-input').click();
+      grid.appendChild(add);
+    }
+  }
+
+  function removePhoto(i) {
+    photos.splice(i, 1);
+    renderPhotoGrid();
+  }
+
+  // ── NAVIGATION ──
+  function goToStep(n) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    const screens = ['screen-photos', 'screen-details', 'screen-loading', 'screen-results'];
+    document.getElementById(screens[n - 1]).classList.add('active');
+    const labels = ['1', '2', '2', '3'];
+    const totals = ['3', '3', '3', '3'];
+    document.querySelector('#step-label b').textContent = labels[n - 1];
+    document.getElementById('step-label').innerHTML = `Step <b>${labels[n-1]}</b> of ${totals[n-1]}`;
+    window.scrollTo(0, 0);
+  }
+
+  function goToStep2() {
+    if (photos.length === 0) {
+      // Allow skipping photos — just go to step 2
+    }
+    goToStep(2);
+  }
+
+  // ── GENERATE ──
+  async function generate() {
+    const context = document.getElementById('item-context').value.trim();
+    const errBox = document.getElementById('error-box');
+
+    if (photos.length === 0 && !context) {
+      errBox.style.display = 'block';
+      errBox.textContent = '⚠ Please add at least one photo or describe your item.';
+      return;
+    }
+    errBox.style.display = 'none';
+    goToStep(3);
+
+    try {
+      const content = [];
+      photos.slice(0, 4).forEach(p => {
+        content.push({ type: 'image', source: { type: 'base64', media_type: p.type, data: p.data } });
+      });
+      content.push({
+        type: 'text',
+        text: `You are an expert Facebook Marketplace copywriter who helps resellers write listings that sell fast.
+
+Seller's notes: ${context || 'See images provided.'}
+
+Generate an optimized mobile-friendly Facebook Marketplace listing. Respond ONLY with valid JSON, no markdown, no backticks:
+{
+  "title": "punchy title under 60 chars, specific and keyword-rich",
+  "description": "3-4 sentences. Lead with the best feature. Mention condition clearly. End with 'DM to meet up. Local pickup only.'",
+  "price": 45,
+  "price_low": 35,
+  "price_high": 55,
+  "condition": "Like New",
+  "keywords": ["keyword1","keyword2","keyword3","keyword4","keyword5"],
+  "best_time": "Saturday morning",
+  "tip": "one specific tip to sell this item faster on mobile marketplace"
+}`
+      });
+
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          messages: [{ role: 'user', content }]
+        })
+      });
+
+      const data = await res.json();
+      const raw = data.content.map(b => b.text || '').join('');
+      const clean = raw.replace(/```json|```/g, '').trim();
+      generatedResult = JSON.parse(clean);
+      renderResults(generatedResult);
+      goToStep(4);
+    } catch (e) {
+      goToStep(2);
+      const errBox = document.getElementById('error-box');
+      errBox.style.display = 'block';
+      errBox.textContent = '⚠ Something went wrong. Please try again.';
+    }
+  }
+
+  // ── RENDER RESULTS ──
+  function renderResults(r) {
+    const el = document.getElementById('results-content');
+    el.innerHTML = `
+      <div class="result-field">
+        <div class="result-field-label">Title</div>
+        <div class="result-field-value title-val">${esc(r.title)}</div>
+        <div class="copy-row"><button class="copy-btn" onclick="copyField(this, '${esc(r.title)}')">copy</button></div>
+      </div>
+
+      <div class="result-field">
+        <div class="result-field-label">Description</div>
+        <div class="result-field-value">${esc(r.description)}</div>
+        <div class="copy-row"><button class="copy-btn" onclick="copyField(this, \`${r.description.replace(/`/g,"'")}\`)">copy</button></div>
+      </div>
+
+      <div class="result-field">
+        <div class="result-field-label">Suggested Pricing</div>
+        <div class="price-chips">
+          <div class="price-chip main">List: $${r.price}</div>
+          <div class="price-chip">Accept: $${r.price_low}</div>
+          <div class="price-chip">Max ask: $${r.price_high}</div>
+          <div class="price-chip">${esc(r.condition)}</div>
+        </div>
+      </div>
+
+      <div class="result-field">
+        <div class="result-field-label">Keywords</div>
+        <div class="keyword-wrap">${(r.keywords || []).map(k => `<span class="keyword-pill">${esc(k)}</span>`).join('')}</div>
+      </div>
+
+      <div class="tip-box">
+        <strong>💡 Pro tip:</strong> ${esc(r.tip)}<br/>
+        <span style="color:#777; font-size:12px; margin-top:4px; display:block;">📅 Best time to post: ${esc(r.best_time)}</span>
+      </div>
+
+      <div class="fb-banner">
+        <div style="font-size:15px; font-weight:700;">Ready to post?</div>
+        <p>Copy your listing above, then tap below to open Facebook Marketplace. Paste your description and you're live.</p>
+      </div>
+    `;
+  }
+
+  function esc(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── COPY HELPERS ──
+  function copyField(btn, text) {
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = '✓ copied';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 1800);
+    });
+  }
+
+  function copyAll() {
+    if (!generatedResult) return;
+    const r = generatedResult;
+    const full = `${r.title}\n\n${r.description}\n\nPrice: $${r.price}\nCondition: ${r.condition}`;
+    navigator.clipboard.writeText(full).then(() => {
+      const btn = document.getElementById('copy-all-btn');
+      btn.textContent = '✓ Copied!';
+      setTimeout(() => btn.textContent = '📋 Copy Full Listing', 2000);
+    });
+  }
+
+  // ── FACEBOOK DEEP LINK ──
+  function openFacebook() {
+    // Copy listing first for easy paste
+    if (generatedResult) {
+      const r = generatedResult;
+      const full = `${r.title}\n\n${r.description}\n\nPrice: $${r.price}\nCondition: ${r.condition}`;
+      navigator.clipboard.writeText(full).catch(() => {});
+    }
+    // Deep link to FB Marketplace new listing (opens app on mobile)
+    window.location.href = 'fb://marketplace';
+    // Fallback: open FB Marketplace in browser after short delay
+    setTimeout(() => {
+      window.open('https://www.facebook.com/marketplace/create/item/', '_blank');
+    }, 1200);
+  }
+
+  function startOver() {
+    photos = [];
+    generatedResult = null;
+    document.getElementById('item-context').value = '';
+    document.getElementById('photo-grid').innerHTML = '';
+    document.getElementById('photo-grid').style.display = 'none';
+    document.getElementById('upload-zone').style.display = 'flex';
+    document.getElementById('results-content').innerHTML = '';
+    goToStep(1);
+  }
+</script>
+</body>
+</html>
