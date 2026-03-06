@@ -604,8 +604,9 @@ First, use web search to look up current Facebook Marketplace and eBay sold list
       if (!res.ok || !data.content) throw new Error(data.error?.message || 'API error');
       // Extract only text blocks (skip tool_use, tool_result, web_search blocks)
       const raw = data.content.filter(b => b.type === 'text').map(b => b.text).join('');
-      const clean = raw.replace(/```json|```/g, '').trim();
-      generatedResult = JSON.parse(clean);
+      const jsonMatch = raw.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('No JSON found in response');
+      generatedResult = JSON.parse(jsonMatch[0]);
       renderResults(generatedResult);
       goToStep(4);
     } catch (e) {
