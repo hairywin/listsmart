@@ -861,7 +861,7 @@ For the condition field you MUST use exactly one of these four values based on t
       condition: r.condition
     };
 
-    const isExtensionConfigured = EXTENSION_ID && EXTENSION_ID !== 'nfpkmghhncjkgfmpoemoilmpmoknmkmo';
+    const isExtensionConfigured = EXTENSION_ID && EXTENSION_ID !== 'YOUR_EXTENSION_ID_HERE';
 
     if (isExtensionConfigured && typeof chrome !== 'undefined' && chrome.runtime) {
       // Try to send to extension, but always open FB tab regardless of outcome
