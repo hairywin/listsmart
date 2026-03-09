@@ -685,19 +685,54 @@ First, use web search to look up current Facebook Marketplace and eBay sold list
   }
 
   // ── FACEBOOK DEEP LINK ──
+
+  // Extension ID — update this after loading the extension in Chrome (chrome://extensions)
+  const EXTENSION_ID = 'YOUR_EXTENSION_ID_HERE';
+
   function openFacebook() {
-    // Copy listing first for easy paste
-    if (generatedResult) {
-      const r = generatedResult;
-      const full = `${r.title}\n\n${r.description}\n\nPrice: $${r.price}\nCondition: ${r.condition}`;
-      navigator.clipboard.writeText(full).catch(() => {});
+    if (!generatedResult) {
+      openFacebookTab();
+      return;
     }
-    // Deep link to FB Marketplace new listing (opens app on mobile)
-    window.location.href = 'fb://marketplace';
-    // Fallback: open FB Marketplace in browser after short delay
-    setTimeout(() => {
+
+    const r = generatedResult;
+    const full = `${r.title}\n\n${r.description}\n\nPrice: $${r.price}\nCondition: ${r.condition}`;
+
+    // Always copy to clipboard as fallback (works on mobile too)
+    navigator.clipboard.writeText(full).catch(() => {});
+
+    // Send listing to extension via chrome.runtime (desktop only)
+    // This must complete BEFORE opening the FB tab, so we open FB in the callback
+    const listing = {
+      title: r.title,
+      description: r.description,
+      price: r.price,
+      condition: r.condition
+    };
+
+    if (typeof chrome !== 'undefined' && chrome.runtime) {
+      chrome.runtime.sendMessage(EXTENSION_ID, { type: 'LISTSMART_LISTING', listing }, () => {
+        // Open FB only after storage is confirmed written
+        openFacebookTab();
+      });
+    } else {
+      // Mobile or extension not installed — open directly
+      openFacebookTab();
+    }
+  }
+
+  function openFacebookTab() {
+    // On mobile, try the native app deep link first
+    const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
+    if (isMobile) {
+      window.location.href = 'fb://marketplace';
+      // Fall back to browser after 1.5s if app didn't open
+      setTimeout(() => {
+        window.open('https://www.facebook.com/marketplace/create/item/', '_blank');
+      }, 1500);
+    } else {
       window.open('https://www.facebook.com/marketplace/create/item/', '_blank');
-    }, 1200);
+    }
   }
 
   function startOver() {
