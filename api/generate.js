@@ -42,9 +42,23 @@ export default async function handler(req, res) {
 
         if (data.stop_reason === 'tool_use') {
           currentMessages.push({ role: 'assistant', content: data.content });
+
+          // The Anthropic web search tool returns results as server-side tool_result
+          // blocks already embedded in data.content — pass them straight back.
           const toolResults = data.content
             .filter(b => b.type === 'tool_use')
-            .map(b => ({ type: 'tool_result', tool_use_id: b.id, content: 'Search completed.' }));
+            .map(b => {
+              // Look for a matching tool_result already in the response content
+              const resultBlock = data.content.find(
+                r => r.type === 'tool_result' && r.tool_use_id === b.id
+              );
+              return {
+                type: 'tool_result',
+                tool_use_id: b.id,
+                content: resultBlock ? resultBlock.content : 'No results found.',
+              };
+            });
+
           currentMessages.push({ role: 'user', content: toolResults });
         } else {
           return { status: 200, data };
