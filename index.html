@@ -302,6 +302,72 @@
     font-size: 17px;
     font-weight: 700;
   }
+  /* ── EDITABLE RESULT FIELDS ── */
+  /* ── EDITABLE FIELDS ── */
+  /* Default: looks like read-only display text */
+  .edit-input, .edit-textarea {
+    width: 100%;
+    background: transparent;
+    border: 1.5px solid transparent;
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    line-height: 1.65;
+    padding: 8px 10px;
+    outline: none;
+    resize: none;
+    transition: border-color 0.2s, background 0.2s;
+    cursor: pointer;
+  }
+  /* Hover: hint that it's tappable */
+  .edit-input:hover, .edit-textarea:hover {
+    border-color: var(--border);
+    background: var(--surface2);
+  }
+  /* Active edit mode */
+  .edit-input:focus, .edit-textarea:focus {
+    border-color: var(--accent);
+    background: var(--surface2);
+    cursor: text;
+  }
+  .edit-input.title-val {
+    font-family: 'Syne', sans-serif;
+    font-size: 17px;
+    font-weight: 700;
+  }
+  /* Price chip input */
+  .edit-price {
+    width: 60px;
+    background: transparent;
+    border: none;
+    border-bottom: 1.5px dashed rgba(255,92,53,0.4);
+    color: var(--accent);
+    font-family: monospace;
+    font-size: 14px;
+    font-weight: bold;
+    padding: 0 2px;
+    outline: none;
+    text-align: center;
+    transition: border-color 0.2s;
+    cursor: pointer;
+  }
+  .edit-price:hover { border-bottom-color: var(--accent); }
+  .edit-price:focus { border-bottom-color: var(--accent); cursor: text; }
+  /* Pencil hint row */
+  .edit-hint {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+    margin-top: 4px;
+    padding-left: 10px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    opacity: 1;
+    transition: opacity 0.2s;
+  }
+  .result-field:focus-within .edit-hint { opacity: 0; }
   .copy-row {
     display: flex;
     justify-content: flex-end;
@@ -671,23 +737,35 @@ For the condition field you MUST use exactly one of these four values based on t
     el.innerHTML = `
       <div class="result-field">
         <div class="result-field-label">Title</div>
-        <div class="result-field-value title-val">${esc(r.title)}</div>
-        <div class="copy-row"><button class="copy-btn" onclick="copyField(this, '${esc(r.title)}')">copy</button></div>
+        <input class="edit-input title-val" id="edit-title"
+          value="${esc(generatedResult.title)}"
+          oninput="generatedResult.title = this.value"
+          title="Tap to edit" />
+        <div class="edit-hint">✏ tap to edit</div>
       </div>
 
       <div class="result-field">
         <div class="result-field-label">Description</div>
-        <div class="result-field-value">${esc(r.description)}</div>
-        <div class="copy-row"><button class="copy-btn" onclick="copyField(this, \`${r.description.replace(/`/g,"'")}\`)">copy</button></div>
+        <textarea class="edit-textarea" id="edit-description" rows="5"
+          oninput="generatedResult.description = this.value"
+          title="Tap to edit">${esc(generatedResult.description)}</textarea>
+        <div class="edit-hint">✏ tap to edit</div>
       </div>
 
       <div class="result-field">
         <div class="result-field-label">Suggested Pricing</div>
         <div class="price-chips">
-          <div class="price-chip main">List: $${r.price}</div>
+          <div class="price-chip main" style="display:flex;align-items:center;gap:4px;">
+            List: $<input class="edit-price" id="edit-price"
+              type="number" min="0"
+              value="${generatedResult.price}"
+              oninput="generatedResult.price = this.value"
+              title="Tap to edit" />
+          </div>
           <div class="price-chip">Accept: $${r.price_low}</div>
           <div class="price-chip">Max ask: $${r.price_high}</div>
         </div>
+        <div class="edit-hint">✏ tap price to edit</div>
       </div>
 
       <div class="condition-picker">
@@ -752,7 +830,8 @@ For the condition field you MUST use exactly one of these four values based on t
 
   // ── FACEBOOK DEEP LINK ──
 
-  // Extension ID — update this after loading the extension in Chrome (chrome://extensions)
+  // Your ListSmart extension ID from chrome://extensions
+  // Replace this with your actual ID — button won't work without it
   const EXTENSION_ID = 'nfpkmghhncjkgfmpoemoilmpmoknmkmo';
 
   function openFacebook() {
@@ -764,11 +843,9 @@ For the condition field you MUST use exactly one of these four values based on t
     const r = generatedResult;
     const full = `${r.title}\n\n${r.description}\n\nPrice: $${r.price}\nCondition: ${r.condition}`;
 
-    // Always copy to clipboard as fallback (works on mobile too)
+    // Always copy to clipboard as fallback
     navigator.clipboard.writeText(full).catch(() => {});
 
-    // Send listing to extension via chrome.runtime (desktop only)
-    // This must complete BEFORE opening the FB tab, so we open FB in the callback
     const listing = {
       title: r.title,
       description: r.description,
@@ -776,13 +853,27 @@ For the condition field you MUST use exactly one of these four values based on t
       condition: r.condition
     };
 
-    if (typeof chrome !== 'undefined' && chrome.runtime) {
-      chrome.runtime.sendMessage(EXTENSION_ID, { type: 'LISTSMART_LISTING', listing }, () => {
-        // Open FB only after storage is confirmed written
-        openFacebookTab();
-      });
+    const isExtensionConfigured = EXTENSION_ID && EXTENSION_ID !== 'nfpkmghhncjkgfmpoemoilmpmoknmkmo';
+
+    if (isExtensionConfigured && typeof chrome !== 'undefined' && chrome.runtime) {
+      // Try to send to extension, but always open FB tab regardless of outcome
+      let tabOpened = false;
+      const openOnce = () => { if (!tabOpened) { tabOpened = true; openFacebookTab(); } };
+
+      try {
+        chrome.runtime.sendMessage(EXTENSION_ID, { type: 'LISTSMART_LISTING', listing }, () => {
+          // chrome.runtime.lastError means extension not reachable — ignore and open anyway
+          void chrome.runtime.lastError;
+          openOnce();
+        });
+      } catch (e) {
+        openOnce();
+      }
+
+      // Safety fallback: if callback never fires within 1.5s, open anyway
+      setTimeout(openOnce, 1500);
     } else {
-      // Mobile or extension not installed — open directly
+      // No extension configured or not on desktop — open directly
       openFacebookTab();
     }
   }
