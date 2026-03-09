@@ -364,6 +364,39 @@
   }
   .tip-box strong { color: var(--success); }
 
+  /* ── CONDITION PICKER ── */
+  .condition-picker {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  .condition-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .condition-opt {
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: 1.5px solid var(--border);
+    background: var(--surface2);
+    color: var(--muted);
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .condition-opt:hover { border-color: var(--accent); color: var(--text); }
+  .condition-opt.selected {
+    background: #2a1500;
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 600;
+  }
+
   .spacer { flex: 1; }
   .bottom-pad { height: calc(16px + var(--safe-bottom)); }
 
@@ -583,11 +616,13 @@ First, use web search to look up current Facebook Marketplace and eBay sold list
   "price": 45,
   "price_low": 35,
   "price_high": 55,
-  "condition": "Like New",
+  "condition": "Used - Like New",
   "keywords": ["keyword1","keyword2","keyword3","keyword4","keyword5"],
   "best_time": "Saturday morning",
   "tip": "one specific tip to sell this item faster on mobile marketplace"
-}`
+}
+
+For the condition field you MUST use exactly one of these four values based on the item's apparent condition: "New", "Used - Like New", "Used - Good", "Used - Fair"`
       });
 
       const res = await fetch('/api/generate', {
@@ -618,7 +653,20 @@ First, use web search to look up current Facebook Marketplace and eBay sold list
   }
 
   // ── RENDER RESULTS ──
+  const CONDITIONS = ['New', 'Used - Like New', 'Used - Good', 'Used - Fair'];
+
   function renderResults(r) {
+    // Normalise AI condition to one of the 4 exact FB values
+    const normaliseCondition = (raw) => {
+      const s = (raw || '').toLowerCase();
+      if (s === 'new') return 'New';
+      if (s.includes('like new')) return 'Used - Like New';
+      if (s.includes('good'))     return 'Used - Good';
+      if (s.includes('fair'))     return 'Used - Fair';
+      return 'Used - Good'; // safe fallback
+    };
+    generatedResult.condition = normaliseCondition(r.condition);
+
     const el = document.getElementById('results-content');
     el.innerHTML = `
       <div class="result-field">
@@ -639,7 +687,17 @@ First, use web search to look up current Facebook Marketplace and eBay sold list
           <div class="price-chip main">List: $${r.price}</div>
           <div class="price-chip">Accept: $${r.price_low}</div>
           <div class="price-chip">Max ask: $${r.price_high}</div>
-          <div class="price-chip">${esc(r.condition)}</div>
+        </div>
+      </div>
+
+      <div class="condition-picker">
+        <div class="result-field-label">Condition</div>
+        <div class="condition-options">
+          ${CONDITIONS.map(c => `
+            <button class="condition-opt${generatedResult.condition === c ? ' selected' : ''}"
+              onclick="selectCondition('${c}', this)">
+              ${c}
+            </button>`).join('')}
         </div>
       </div>
 
@@ -655,9 +713,17 @@ First, use web search to look up current Facebook Marketplace and eBay sold list
 
       <div class="fb-banner">
         <div style="font-size:15px; font-weight:700;">Ready to post?</div>
-        <p>Copy your listing above, then tap below to open Facebook Marketplace. Paste your description and you're live.</p>
+        <p>Condition is pre-selected above — change it if needed, then tap below.</p>
       </div>
     `;
+  }
+
+  function selectCondition(value, btn) {
+    // Update selection UI
+    btn.closest('.condition-options').querySelectorAll('.condition-opt').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    // Keep generatedResult in sync so openFacebook sends the right value
+    generatedResult.condition = value;
   }
 
   function esc(str) {
@@ -687,7 +753,7 @@ First, use web search to look up current Facebook Marketplace and eBay sold list
   // ── FACEBOOK DEEP LINK ──
 
   // Extension ID — update this after loading the extension in Chrome (chrome://extensions)
-  const EXTENSION_ID = 'nfpkmghhncjkgfmpoemoilmpmoknmkmo';
+  const EXTENSION_ID = 'YOUR_EXTENSION_ID_HERE';
 
   function openFacebook() {
     if (!generatedResult) {
