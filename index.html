@@ -738,7 +738,6 @@ For the condition field you MUST use exactly one of these four values based on t
       <div class="result-field">
         <div class="result-field-label">Title</div>
         <input class="edit-input title-val" id="edit-title"
-          value="${esc(generatedResult.title)}"
           oninput="generatedResult.title = this.value"
           title="Tap to edit" />
         <div class="edit-hint">✏ tap to edit</div>
@@ -748,7 +747,7 @@ For the condition field you MUST use exactly one of these four values based on t
         <div class="result-field-label">Description</div>
         <textarea class="edit-textarea" id="edit-description" rows="5"
           oninput="generatedResult.description = this.value"
-          title="Tap to edit">${esc(generatedResult.description)}</textarea>
+          title="Tap to edit"></textarea>
         <div class="edit-hint">✏ tap to edit</div>
       </div>
 
@@ -758,7 +757,6 @@ For the condition field you MUST use exactly one of these four values based on t
           <div class="price-chip main" style="display:flex;align-items:center;gap:4px;">
             List: $<input class="edit-price" id="edit-price"
               type="number" min="0"
-              value="${generatedResult.price}"
               oninput="generatedResult.price = this.value"
               title="Tap to edit" />
           </div>
@@ -766,8 +764,16 @@ For the condition field you MUST use exactly one of these four values based on t
           <div class="price-chip">Max ask: $${r.price_high}</div>
         </div>
         <div class="edit-hint">✏ tap price to edit</div>
-      </div>
+      </div>`;
 
+    // Set values via JS .value — avoids HTML entity encoding corrupting the strings
+    document.getElementById('edit-title').value = generatedResult.title || '';
+    document.getElementById('edit-description').value = generatedResult.description || '';
+    document.getElementById('edit-price').value = generatedResult.price || '';
+
+    // Append the rest via a fragment so the .value assignments above are not wiped
+    const rest = document.createElement('div');
+    rest.innerHTML = `
       <div class="condition-picker">
         <div class="result-field-label">Condition</div>
         <div class="condition-options">
@@ -794,6 +800,8 @@ For the condition field you MUST use exactly one of these four values based on t
         <p>Condition is pre-selected above — change it if needed, then tap below.</p>
       </div>
     `;
+    // Move all children of the temp div into el
+    while (rest.firstChild) el.appendChild(rest.firstChild);
   }
 
   function selectCondition(value, btn) {
